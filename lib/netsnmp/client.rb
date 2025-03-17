@@ -105,24 +105,51 @@ module NETSNMP
 
     # Perform a SNMP GETBULK Request (performs multiple GETNEXT)
     #
-    # @param [String] oid the first oid
-    # @param [Hash] options the varbind options
-    # @option options [Integer] :errstat sets the number of objects expected for the getnext instance
-    # @option options [Integer] :errindex number of objects repeating for all the repeating IODs.
+    # @param [String] :oid the first oid
+    # @param [Integer] :max_repetitions number of OIDs requested
     #
     # @return [Enumerator] the enumerator-collection of the oid-value pairs
     #
-    # def get_bulk(oid)
-    #  request = @session.build_pdu(:getbulk, *oids)
-    #  request[:error_status]  = options.delete(:non_repeaters) || 0
-    #  request[:error_index] = options.delete(:max_repetitions) || 10
-    #  response = @session.send(request)
-    #  Enumerator.new do |y|
-    #    response.varbinds.each do |varbind|
-    #      y << [ varbind.oid, varbind.value ]
-    #    end
-    #  end
-    # end
+    def get_bulk(oid:, max_repetitions: 10)
+      request = @session.build_pdu(:getbulk, oid:)
+      request.error_index = max_repetitions
+      response = @session.send(request)
+      Enumerator.new do |y|
+        response.varbinds.each do |varbind|
+          y << [ varbind.oid, varbind.value ]
+        end
+      end
+    end
+
+    # Perform a SNMP BULKWALK Request (retrieve a subtree of management values using SNMP GETBULK requests)
+    #
+    # @param [String] :oid the root oid from the subtree
+    # @param [Integer] :max_repetitions number of OIDs requested per GETNEXT request
+    #
+    # @return [Enumerator] the enumerator-collection of the oid-value pairs
+    #
+    def bulk_walk(oid:, max_repetitions: 10)
+      walkoid = OID.build(oid)
+      Enumerator.new do |y|
+        code = walkoid
+        first_response_code = nil
+        catch(:walk) do
+          loop do
+            get_bulk(oid: code, max_repetitions: max_repetitions).each do |oid, value|
+              code = oid
+              if !OID.parent?(walkoid, code) ||
+                 value.eql?(:endofmibview) ||
+                 (code == first_response_code)
+                throw(:walk)
+              else
+                y << [code, value]
+              end
+              first_response_code ||= code
+            end
+          end
+        end
+      end
+    end
 
     # Perform a SNMP SET Request
     #

@@ -48,7 +48,7 @@ module NETSNMP
         typ = case type
               when :get       then 0
               when :getnext   then 1
-              #          when :getbulk   then 5
+              when :getbulk   then 5
               when :set       then 3
               when :inform    then 6
               when :trap      then 7
@@ -61,6 +61,7 @@ module NETSNMP
     end
 
     attr_reader :varbinds, :type, :version, :community, :request_id
+    attr_writer :error_index
 
     def initialize(type:,
                    version:,
