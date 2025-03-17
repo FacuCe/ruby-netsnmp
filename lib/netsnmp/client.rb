@@ -124,7 +124,7 @@ module NETSNMP
     # Perform a SNMP BULKWALK Request (retrieve a subtree of management values using SNMP GETBULK requests)
     #
     # @param [String] :oid the root oid from the subtree
-    # @param [Integer] :max_repetitions number of OIDs requested per GETNEXT request
+    # @param [Integer] :max_repetitions number of OIDs requested per GETBULK request
     #
     # @return [Enumerator] the enumerator-collection of the oid-value pairs
     #
